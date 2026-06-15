@@ -10,22 +10,35 @@
 **RDMA (Remote Direct Memory Access)** lets one host read or write another host's memory directly — bypassing the remote
 CPU and OS kernel entirely.
 
+![](../img/tcp_vs_rdma_data_path.svg)
+
+
+The full TCP path forces 4 copies and CPU involvement at every hop; RDMA collapses it to zero copies and zero CPU.
+
 ```
 Without RDMA (TCP/IP):
   App → Kernel → NIC → Network → NIC → Kernel → App
         (copy)                         (copy)
         CPU involved both sides
 
+```
+
+So what does the CPU actually do in an RDMA transfer?
+— the answer is it posts the work request (a single instruction to the NIC's queue pair), then gets out of the way.
+
+```
 With RDMA:
   App → NIC → Network → NIC → Remote Memory
         Hardware does all of it. CPU not involved.
 ```
 
-**Why it matters for GPU clusters:**
+The NIC's RDMA engine handles segmentation, retransmit, and DMA into the target buffer autonomously
 
+
+**Why it matters for GPU clusters:**
 - Eliminates CPU bottleneck in GPU-to-GPU data transfers
-- Cuts latency from ~50–100 µs (TCP) to ~1–2 µs (IB RDMA)
-- Saturates 400 Gb/s fabric without burning CPU cores
+- Cuts latency from `~50–100 µs` (TCP) to `~1–2 µs` (IB RDMA)
+- Saturates `400 Gb/s` fabric without burning CPU cores
 - Required for NCCL AllReduce at scale (gradient sync in LLM training)
 
 ---

@@ -113,6 +113,8 @@ python plot_bandwidth.py
 
 ## 🏗️ Architecture
 
+![](./img/gpu_fabric_bench_architecture.svg)
+
 ```text
     
     ┌─────────────────────────────────────────────────────┐
