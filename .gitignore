@@ -1,0 +1,48 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+override.tf
+override.tf.json
+
+# Ansible
+*.retry
+group_vars/all/vault.yml
+host_vars/*/vault.yml
+.vault_pass
+
+# Benchmark results / output
+results/
+*.log
+*.csv
+*.out
+*.err
+
+# OS
+.DS_Store
+Thumbs.db
