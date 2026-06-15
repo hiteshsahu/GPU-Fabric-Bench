@@ -1,6 +1,9 @@
 # GPU-Fabric-Bench 🛜
 > Reproducible RDMA fabric benchmarking suite for NCCL GPU collective communications on AWS EFA mapping InfiniBand concepts to cloud-native HPC networking.
 
+
+![GPU-Fabric-Bench](./img/cover.jpeg)
+
 ### 🎯 Goal
 > Goal is to build NVIDIA GPU-GPU communication network(Not to be confused with AWS VPC) for distributed AI/HPC workloads
 
