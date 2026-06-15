@@ -9,19 +9,59 @@
 **NCCL (NVIDIA Collective Communications Library)** is NVIDIA's high-performance library for GPU collective operations
 used in distributed deep learning.
 
-```
-Your PyTorch / JAX training loop
-         │
-         ▼
-  torch.distributed / Horovod
-         │
-         ▼
-       NCCL
-         │
-    ┌────┴─────┐
-    │          │
- NVLink      RDMA / EFA
-(intra-node) (inter-node)
+
+```mermaid
+
+
+    flowchart TB
+
+    subgraph Frameworks["🧠 AI Training Loop"]
+        PT["PyTorch"]
+        JX["JAX"]
+    end
+
+    subgraph Distributed["🔄 Distributed Training"]
+        TD["torch.distributed"]
+        HV["Horovod"]
+    end
+
+    NCCL["🔗‍️ NCCL"]
+
+    subgraph Fabric["🌐 GPU Communication Fabric"]
+        NV["⚡ NVLink / NVSwitch"]
+        EFA[" ⚡ EFA / RDMA 🔀"]
+    end
+
+    Bench["🧮 GPU-Fabric-Bench"]
+
+    PT --> TD
+    JX --> TD
+    PT --> HV
+
+    TD --> NCCL
+    HV --> NCCL
+
+    NCCL --> NV
+    NCCL --> EFA
+
+    NV --> Bench
+    EFA --> Bench
+
+%% Styles
+    classDef framework fill:#76B900,color:#ffffff,stroke:#4A7C00,stroke-width:2px
+    classDef distributed fill:#2496ED,color:#ffffff,stroke:#0B5CAD,stroke-width:2px
+    classDef nccl fill:#FF6B35,color:#ffffff,stroke:#C63F17,stroke-width:3px
+    classDef fabric fill:#7B61FF,color:#ffffff,stroke:#4D36C7,stroke-width:2px
+    classDef benchmark fill:#E01E5A,color:#ffffff,stroke:#A31240,stroke-width:3px
+
+    class PT,JX framework
+    class TD,HV distributed
+    class NCCL nccl
+    class NV,EFA fabric
+    class Bench benchmark
+
+
+
 ```
 
 **What NCCL does automatically:**
@@ -51,46 +91,96 @@ Your PyTorch / JAX training loop
 NCCL automatically picks an algorithm based on message size and topology. Understanding this lets you override when NCCL
 gets it wrong.
 
-### Ring AllReduce
+### 🔄 Ring AllReduce
 
-```
-Rank 0 → Rank 1 → Rank 2 → Rank 3 → Rank 0
-          (circular pipeline)
+```mermaid
+flowchart LR
+    R0["🧮 Rank 0"]
+    R1["🧮 Rank 1"]
+    R2["🧮 Rank 2"]
+    R3["🧮 Rank 3"]
 
-Steps: 2(N-1)  where N = number of GPUs
-Bus bandwidth saturated: always uses 100% of bisection bandwidth
-Latency: O(N) — poor for small messages at large scale
+    R0 --> R1
+    R1 --> R2
+    R2 --> R3
+    R3 --> R0
+
+    classDef rank fill:#2496ED,color:#fff,stroke:#0B5CAD,stroke-width:2px
+
+    class R0,R1,R2,R3 rank
+
 ```
 
 Best for: **large messages** (≥ 1 MB) where bandwidth matters more than latency.
 
-### Tree AllReduce (Binary/Recursive Halving)
+| Metric                | Value                                |
+|-----------------------|--------------------------------------|
+| Communication Steps   | $2(N-1)$                             |
+| Latency               | $O(N)$                               |
+| Bandwidth Utilization | Excellent                            |
+| Best For              | Large messages                       |
+| Weakness              | Higher latency as cluster size grows |
 
-```
-       Rank 0
-      /      \
-  Rank 1    Rank 2
-  /    \
-Rank 3  Rank 4
+- **Bus bandwidth saturated**:  $2(N-1)$ always uses 100% of bisection bandwidth
+- **Latency**: $O(N)$  — poor for small messages at large scale
 
-Steps: 2 × log₂(N)
-Latency: O(log N) — much better than ring at scale
-Bandwidth: slightly worse than ring for large messages (tree has internal bottleneck)
+### 🌲 Tree AllReduce (Binary/Recursive Halving)
+
+```mermaid
+
+flowchart TD
+    R0["🧮 Rank 0"]
+
+    R1["🧮 Rank 1"]
+    R2["🧮 Rank 2"]
+
+    R3["🧮 Rank 3"]
+    R4["🧮 Rank 4"]
+
+    R0 --> R1
+    R0 --> R2
+
+    R1 --> R3
+    R1 --> R4
+
+    classDef root fill:#FF6B35,color:#fff,stroke:#C63F17,stroke-width:3px
+    classDef middle fill:#2496ED,color:#fff,stroke:#0B5CAD,stroke-width:2px
+    classDef leaf fill:#76B900,color:#fff,stroke:#4A7C00,stroke-width:2px
+
+    class R0 root
+    class R1,R2 middle
+    class R3,R4 leaf
+    
+   
 ```
+
+| Metric                | Value                                 |
+|-----------------------|---------------------------------------|
+| Communication Steps   | $2 \times \log_2(N)$                  |
+| Latency               | $O(\log N)$                           |
+| Bandwidth Utilization | Moderate                              |
+| Best For              | Small messages, large clusters        |
+| Weakness              | Internal nodes can become bottlenecks |
+
+
+- **Latency:** $O(\log N)$ — much better than ring at scale
+- **Bandwidth:** slightly worse than ring for large messages (tree has internal bottleneck)
 
 Best for: **small messages** and **large GPU counts** where latency dominates.
 
 ### Override Algorithm
 
 ```bash
-# Force ring
-NCCL_ALGO=Ring
 
-# Force tree
-NCCL_ALGO=Tree
-
-# Let NCCL decide (default)
-NCCL_ALGO=auto
+    # Force ring
+    NCCL_ALGO=Ring
+    
+    # Force tree
+    NCCL_ALGO=Tree
+    
+    # Let NCCL decide (default)
+    NCCL_ALGO=auto
+    
 ```
 
 ---
@@ -141,7 +231,7 @@ NCCL_ALGO=auto
 
 ---
 
-## 📡 EFA-Specific Configuration
+##  ⚡ EFA-Specific Configuration
 
 ### Required Plugin
 
@@ -153,50 +243,56 @@ NCCL → aws-ofi-nccl plugin → libfabric EFA provider → EFA NIC → SRD netw
 ```
 
 ```bash
-# Install aws-ofi-nccl
-git clone https://github.com/aws/aws-ofi-nccl
-./autogen.sh && ./configure --with-mpi=/opt/amazon/openmpi \
-    --with-libfabric=/opt/amazon/efa \
-    --with-nccl=/usr/local/nccl \
-    --with-cuda=/usr/local/cuda
-make && sudo make install
+    
+    # Install aws-ofi-nccl
+    git clone https://github.com/aws/aws-ofi-nccl
+    ./autogen.sh && ./configure --with-mpi=/opt/amazon/openmpi \
+        --with-libfabric=/opt/amazon/efa \
+        --with-nccl=/usr/local/nccl \
+        --with-cuda=/usr/local/cuda
+    make && sudo make install
+    
+    # Verify plugin is found
+    ls /usr/local/lib/libnccl-net.so
 
-# Verify plugin is found
-ls /usr/local/lib/libnccl-net.so
 ```
 
 ### Recommended EFA Launch Environment
 
 ```bash
-# Tell NCCL to use EFA HCAs, not eth0
-export NCCL_IB_HCA=efa
-export NCCL_SOCKET_IFNAME=efa
+    
+    # Tell NCCL to use EFA HCAs, not eth0
+    export NCCL_IB_HCA=efa
+    export NCCL_SOCKET_IFNAME=efa
+    
+    # Enable GPUDirect RDMA over EFA (p4d only)
+    export FI_EFA_USE_DEVICE_RDMA=1
+    
+    # EFA fork safety (required for MPI + NCCL)
+    export FI_EFA_FORK_SAFE=1
+    
+    # Point NCCL to the aws-ofi-nccl plugin
+    export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+    
+    # Debug — confirm EFA transport is selected
+    export NCCL_DEBUG=INFO
+    export NCCL_DEBUG_SUBSYS=NET
 
-# Enable GPUDirect RDMA over EFA (p4d only)
-export FI_EFA_USE_DEVICE_RDMA=1
-
-# EFA fork safety (required for MPI + NCCL)
-export FI_EFA_FORK_SAFE=1
-
-# Point NCCL to the aws-ofi-nccl plugin
-export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-
-# Debug — confirm EFA transport is selected
-export NCCL_DEBUG=INFO
-export NCCL_DEBUG_SUBSYS=NET
 ```
 
 ### EFA Multi-Rail (p4d has 4 EFA NICs)
 
 ```bash
-# Let NCCL use all 4 EFA NICs in parallel
-export NCCL_IB_HCA=efa0,efa1,efa2,efa3
 
-# Or let NCCL auto-detect all EFA devices
-export NCCL_IB_HCA=efa
+    # Let NCCL use all 4 EFA NICs in parallel
+    export NCCL_IB_HCA=efa0,efa1,efa2,efa3
+    
+    # Or let NCCL auto-detect all EFA devices
+    export NCCL_IB_HCA=efa
+    
+    # Check how many channels NCCL allocated (look for "nChannels")
+    NCCL_DEBUG=INFO mpirun ... 2>&1 | grep nChannels
 
-# Check how many channels NCCL allocated (look for "nChannels")
-NCCL_DEBUG=INFO mpirun ... 2>&1 | grep nChannels
 ```
 
 ---
@@ -212,11 +308,13 @@ NCCL has three internal protocols, auto-selected by message size:
 | **Simple**           | Higher  | Highest   | > 512 KB       | Full RDMA Write, GPU DMA, no CPU polling |
 
 ```bash
-# Force Simple protocol (best for large AllReduce in LLM training)
-NCCL_PROTO=Simple
 
-# Force LL (best for small control messages, tight loops)
-NCCL_PROTO=LL
+    # Force Simple protocol (best for large AllReduce in LLM training)
+    NCCL_PROTO=Simple
+    
+    # Force LL (best for small control messages, tight loops)
+    NCCL_PROTO=LL
+
 ```
 
 ---
@@ -226,41 +324,50 @@ NCCL_PROTO=LL
 ### Large AllReduce (gradient sync, ≥ 100 MB)
 
 ```bash
-# Ring + Simple protocol = maximum bandwidth
-export NCCL_ALGO=Ring
-export NCCL_PROTO=Simple
-export NCCL_BUFFSIZE=8388608    # 8 MB buffer (2× default)
-export FI_EFA_USE_DEVICE_RDMA=1 # GPU → NIC direct DMA
+    
+    # Ring + Simple protocol = maximum bandwidth
+    export NCCL_ALGO=Ring
+    export NCCL_PROTO=Simple
+    export NCCL_BUFFSIZE=8388608    # 8 MB buffer (2× default)
+    export FI_EFA_USE_DEVICE_RDMA=1 # GPU → NIC direct DMA
+
 ```
+
 
 ### Small AllReduce (< 1 MB, many iterations)
 
 ```bash
-# Tree + LL = minimum latency
-export NCCL_ALGO=Tree
-export NCCL_PROTO=LL
+    
+    # Tree + LL = minimum latency
+    export NCCL_ALGO=Tree
+    export NCCL_PROTO=LL
+
 ```
 
 ### Pipeline Parallelism (Send/Recv heavy)
 
 ```bash
-# Ensure dedicated channels per peer, not shared
-export NCCL_NCHANNELS_PER_NET_PEER=2
-export NCCL_MIN_NCHANNELS=4
+    
+    # Ensure dedicated channels per peer, not shared
+    export NCCL_NCHANNELS_PER_NET_PEER=2
+    export NCCL_MIN_NCHANNELS=4
+
 ```
 
 ### NVLink vs RDMA Priority
 
 ```bash
-# Check NCCL's detected topology (look for NVLink / NET lines)
-NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=GRAPH mpirun ... 2>&1 | grep -E "NVLink|NET|ring"
+    
+    # Check NCCL's detected topology (look for NVLink / NET lines)
+    NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=GRAPH mpirun ... 2>&1 | grep -E "NVLink|NET|ring"
+    
+    # NCCL path priority (automatic):
+    # 1. NVSwitch (intra-node, 600 GB/s on A100)
+    # 2. NVLink (intra-node, direct peer link)
+    # 3. PCIe (intra-node, ~64 GB/s)
+    # 4. RDMA / EFA (inter-node)
+    # 5. TCP socket (fallback)
 
-# NCCL path priority (automatic):
-# 1. NVSwitch (intra-node, 600 GB/s on A100)
-# 2. NVLink (intra-node, direct peer link)
-# 3. PCIe (intra-node, ~64 GB/s)
-# 4. RDMA / EFA (inter-node)
-# 5. TCP socket (fallback)
 ```
 
 ---
@@ -268,21 +375,25 @@ NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=GRAPH mpirun ... 2>&1 | grep -E "NVLink|NET|ri
 ## 📊 Benchmark — Reading nccl-tests Output
 
 ```bash
-# Run AllReduce sweep across message sizes
-all_reduce_perf \
-  -b 1K -e 1G -f 2 \       # 1 KB → 1 GB, doubling each step
-  --iters 20 \              # 20 iterations per size
-  --warmup_iters 5          # 5 warmup iters before timing
+    
+    # Run AllReduce sweep across message sizes
+    all_reduce_perf \
+      -b 1K -e 1G -f 2 \       # 1 KB → 1 GB, doubling each step
+      --iters 20 \              # 20 iterations per size
+      --warmup_iters 5          # 5 warmup iters before timing
+      
 ```
 
 ```
-# Sample output
-#                                                              out-of-place                       in-place
-#       size         count      type   redop    root    time   algbw   busbw #wrong   time   algbw   busbw #wrong
-#        (B)    (elements)                               (us)  (GB/s)  (GB/s)          (us)  (GB/s)  (GB/s)
-      1048576        262144     float     sum      -1    245.3    4.27    8.01      0    243.1    4.31    8.08      0
-     16777216       4194304     float     sum      -1    892.1   18.81   35.27      0    889.4   18.87   35.38      0
-    536870912     134217728     float     sum      -1  18432.0   29.13   54.62      0  18401.0   29.18   54.71      0
+
+    # Sample output
+    #                                                              out-of-place                       in-place
+    #       size         count      type   redop    root    time   algbw   busbw #wrong   time   algbw   busbw #wrong
+    #        (B)    (elements)                               (us)  (GB/s)  (GB/s)          (us)  (GB/s)  (GB/s)
+          1048576        262144     float     sum      -1    245.3    4.27    8.01      0    243.1    4.31    8.08      0
+         16777216       4194304     float     sum      -1    892.1   18.81   35.27      0    889.4   18.87   35.38      0
+        536870912     134217728     float     sum      -1  18432.0   29.13   54.62      0  18401.0   29.18   54.71      0
+
 ```
 
 | Column         | Meaning                                                                      |
@@ -298,9 +409,11 @@ For 2 nodes (N=2): factor = 1.0. For 16 nodes: factor = 1.875.
 **Theoretical peak check:**
 
 ```bash
-# p4d EFA: 400 Gb/s = 50 GB/s per direction
-# NCCL busbw of ~45+ GB/s = ~90% fabric utilization (good)
-# busbw < 30 GB/s = investigate (wrong HCA, missing plugin, TCP fallback)
+    
+    # p4d EFA: 400 Gb/s = 50 GB/s per direction
+    # NCCL busbw of ~45+ GB/s = ~90% fabric utilization (good)
+    # busbw < 30 GB/s = investigate (wrong HCA, missing plugin, TCP fallback)
+
 ```
 
 ---
@@ -310,41 +423,49 @@ For 2 nodes (N=2): factor = 1.0. For 16 nodes: factor = 1.875.
 ### Step 1 — Confirm transport
 
 ```bash
-NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=NET mpirun --np 2 --hostfile hosts \
-  all_reduce_perf -b 1G -e 1G --iters 1 2>&1 | grep -E "Using|NET|transport"
 
-# Good (EFA):   NCCL INFO NET/OFI ... Using EFA provider
-# Bad (socket): NCCL INFO NET Using socket transport
+    NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=NET mpirun --np 2 --hostfile hosts \
+      all_reduce_perf -b 1G -e 1G --iters 1 2>&1 | grep -E "Using|NET|transport"
+    
+    # Good (EFA):   NCCL INFO NET/OFI ... Using EFA provider
+    # Bad (socket): NCCL INFO NET Using socket transport
+
 ```
 
 ### Step 2 — Confirm GPUDirect
 
 ```bash
-NCCL_DEBUG=INFO mpirun ... 2>&1 | grep -i "gdr\|gdrcopy\|device rdma"
 
-# Good: NCCL INFO Using device RDMA
-# Bad:  nothing → FI_EFA_USE_DEVICE_RDMA=1 not set or nv_peer_mem not loaded
+    NCCL_DEBUG=INFO mpirun ... 2>&1 | grep -i "gdr\|gdrcopy\|device rdma"
+    
+    # Good: NCCL INFO Using device RDMA
+    # Bad:  nothing → FI_EFA_USE_DEVICE_RDMA=1 not set or nv_peer_mem not loaded
+
 ```
 
 ### Step 3 — Check NIC affinity per GPU
 
 ```bash
-nvidia-smi topo -m
-# Ensure each GPU is closest to an EFA NIC (PIX or PXB, not SYS)
-# NCCL assigns channels to NICs based on this topology
+
+    nvidia-smi topo -m
+    # Ensure each GPU is closest to an EFA NIC (PIX or PXB, not SYS)
+    # NCCL assigns channels to NICs based on this topology
+
 ```
 
 ### Step 4 — Isolate inter-node vs intra-node
 
 ```bash
-# Run only on 1 node (8 GPUs) → tests NVSwitch/NVLink path
-mpirun --np 8 all_reduce_perf -b 1G -e 1G --iters 10
 
-# Run on 2 nodes (16 GPUs) → adds EFA path
-mpirun --np 16 --hostfile 2node_hosts all_reduce_perf -b 1G -e 1G --iters 10
+    # Run only on 1 node (8 GPUs) → tests NVSwitch/NVLink path
+    mpirun --np 8 all_reduce_perf -b 1G -e 1G --iters 10
+    
+    # Run on 2 nodes (16 GPUs) → adds EFA path
+    mpirun --np 16 --hostfile 2node_hosts all_reduce_perf -b 1G -e 1G --iters 10
+    
+    # If 1-node is fast but 2-node is slow → EFA/RDMA issue
+    # If both are slow → NVLink/topology issue
 
-# If 1-node is fast but 2-node is slow → EFA/RDMA issue
-# If both are slow → NVLink/topology issue
 ```
 
 ### Step 5 — Common fixes
