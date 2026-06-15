@@ -1,7 +1,6 @@
 ## InfiniBand vs AWS EFA -- Deep Dive
 
 > This doc maps physical InfiniBand concepts to AWS EFA equivalents.  
-> Designed as interview prep for NVIDIA GPU infrastructure roles.
 
 ### 🚛 Transport Layer Comparison
 
@@ -24,7 +23,7 @@
 - EFA: AWS manages fabric — you get cluster placement groups as the only knob
 - Implication: can't diagnose "hot links" on EFA the way you can with `ibnetdiscover`
 
-| Concept             | Physical InfiniBand 🪢                | AWS EFA  📡                                          |
+| Concept             | Physical InfiniBand 🪢                | AWS EFA   ⚡                                          |
 |---------------------|---------------------------------------|------------------------------------------------------| 
 | **Transport**       | `RC` (Reliable Connected), UC, UD, RD | `SRD` (Scalable Reliable Datagram) — AWS proprietary |
 | **Verbs API**       | libibverbs (ibv_post_send etc.)       | libfabric with EFA provider                          |
@@ -37,7 +36,7 @@
 
 ### 📦 Hardware Layer Comparison
 
-| Component      | InfiniBand 🪢                  | EFA 📡                                         |
+| Component      | InfiniBand 🪢                  | EFA  ⚡                                         |
 |----------------|--------------------------------|------------------------------------------------|
 | NIC            | Mellanox/NVIDIA ConnectX (HCA) | AWS EFA NIC (custom silicon)                   |
 | Driver         | MLNX_OFED (OpenFabrics)        | aws-efa-installer (libfabric)                  |
@@ -47,7 +46,7 @@
 
 ### 🔗 NCCL Configuration
 
-| Parameter | InfiniBand 🪢                             | EFA 📡                                      |
+| Parameter | InfiniBand 🪢                             | EFA  ⚡                                      |
 |-----------|-------------------------------------------|---------------------------------------------|
 | Transport | `NCCL_IB_DISABLE=0`, `NCCL_IB_HCA=mlx5_0` | `NCCL_IB_HCA=efa`, `NCCL_SOCKET_IFNAME=efa` |
 | Plugin    | nccl-rdma-sharp-plugin                    | aws-ofi-nccl plugin                         |
@@ -55,7 +54,7 @@
 
 ### Debugging Tools
 
-| Task               | InfiniBand 🪢      | EFA 📡                         |
+| Task               | InfiniBand 🪢      | EFA  ⚡                         |
 |--------------------|--------------------|--------------------------------|
 | Check link status  | `ibstat`           | `fi_info -p efa`               |
 | Bandwidth test     | `ib_write_bw`      | `osu_bw` over MPI              |

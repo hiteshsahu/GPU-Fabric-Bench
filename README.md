@@ -14,12 +14,12 @@ These two projects complement each other cleanly:
 
 ---
 
-## 🛑 Hardware Reality Check First
+## 📋 Hardware Reality Check First
 
-<h1>
+<h2>
   <img src="./img/NVIDIA_logo.svg.png" alt="GPU-Fabric-Bench" height="40" align="center">
 Networking Stack
-</h1>
+</h2>
 
 ### 
 ### 1. 🔀 `RDMA` :: Remote Direct Memory Access
@@ -34,9 +34,10 @@ Networking Stack
 - No CPU involvement = Ultra-low latency
 
 ### ⛔ **Limitations**
-- Needs `RDMA-capable NICs` <br/><br/>
+- ⚠️ Needs `RDMA-capable NICs` <br/><br/>
 
-    ![](./img/ConnectX-6-PCIe.png)
+  <img src="./img/ConnectX-6-PCIe.png" alt="RDMA-capable NICs" height="300" align="center">
+
 
 ### 2. 🪢 **InfiniBand**
 > High throughput, low latency, low CPU overhead compute interconnect for HPC and AI clusters
@@ -47,11 +48,12 @@ Networking Stack
 - Used in large HPC / AI clusters: over 50% HPC clusters use InfiniBand
 
 ### ⛔ **Limitations**
-- Need physical Mellanox/NVIDIA NICs (~$500–2000) + IB switch.
+ - ⚠️ Need physical Mellanox/NVIDIA NICs (~$500–2000) + IB switch.
 
 - [NVIDIA Quantum-X 800](https://www.nvidia.com/en-us/networking/products/infiniband/quantum-x800/) Infiniband switch for high-performance InfiniBand-based AI<br/><br/>
   
-  ![](./img/nvidia-infiniband-switch-hdr-200gbs-2c50-d-2x.jpeg)
+  <img src="./img/nvidia-infiniband-switch-hdr-200gbs-2c50-d-2x.jpeg" alt="InfiniBand" height="300" align="center">
+
 
 ### 3. 🔌 `RoCE`:: RDMA over Converged Ethernet
 > RDMA + Ethernet: Enables `RDMA` over Ethernet
@@ -61,24 +63,23 @@ Networking Stack
 - Used in enterprise AI clusters
 
 ### ⛔ **Limitations**
-`RoCE` works on standard 25GbE+ `RDMA-capable NICs`
+- ⚠️ Need RDMA-capable NICs `RoCE` works on standard 25GbE+
 
 ---
 
-<h1>
+<h2>
   <img src="./img/Amazon_Web_Services_2025.svg.png" alt="GPU-Fabric-Bench" width="48" align="center">
   AWS Networking Stack
-</h1>
+</h2>
 
-![]()
 
-###  📡  `EFA` :: **Elastic Fabric Adapter**
+### ⚡  `EFA` :: **Elastic Fabric Adapter**
 `EFA` (Elastic Fabric Adapter) = AWS's RDMA-like network interface using a proprietary **SRD (Scalable Reliable Datagram)** transport — not RoCE v2 or standard IB.
 
 ### **Nvidia Equivalent**
-- ✅️  `InfiniBand` → EFA: same kernel-bypass + RDMA semantics, different transport (SRD vs RC/UD)
-- ✅️  `HCA / libibverbs` → EFA NIC + libfabric with EFA provider
-- ✅️  `NCCL over IB` → NCCL over EFA via `aws-ofi-nccl` plugin
+- ☑️  `InfiniBand` → EFA: same kernel-bypass + RDMA semantics, different transport (SRD vs RC/UD)
+- ☑️  `HCA / libibverbs` → EFA NIC + libfabric with EFA provider
+- ☑️  `NCCL over IB` → NCCL over EFA via `aws-ofi-nccl` plugin
 
 ### **Advantage**
 - Provisioning with Terraform 
@@ -204,8 +205,6 @@ GPU-Fabric-Bench can benchmark:
 
 ---
 
-
-
 ## 💰 Cost Consideration
 > Recommended: Prototype on c5n, run GPU benchmark once, capture results, terminate.
 
@@ -239,9 +238,8 @@ GPU-Fabric-Bench can benchmark:
 
 ---
 
-## Docs
-
-- [InfiniBand vs EFA Deep Dive](docs/ib-vs-efa.md)
+## 📒 Docs
+- [InfiniBand vs EFA Deep Dive](./docs/Ib-vs-efa.md)
 - [RDMA Primer](docs/rdma-primer.md)
 - [NCCL Tuning Guide](docs/nccl-tuning.md)
 - [Benchmark Results](docs/results/)
