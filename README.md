@@ -199,31 +199,28 @@ python plot_bandwidth.py
 
 ## ⏱️ Benchmark
 
-> Performance analysis: bandwidth, latency, bus utilization
+> See [benchmarks/README.md](benchmarks/README.md) for full run instructions, pass criteria, and tuning guide.
 
-### 🔗 `MPI` + `NCCL` integration
+### 🔗 Two suites
 
-GPU-Fabric-Bench can benchmark:
+| Suite | Script | Instance | What it tests |
+|-------|--------|----------|---------------|
+| **MPI / OSU** | `benchmarks/mpi/osu_latency_bw.sh` | `c5n.18xlarge` | EFA fabric: point-to-point latency + bandwidth |
+| **NCCL** | `benchmarks/nccl/run_allreduce.sh` | `p4d.24xlarge` | GPU collective: AllReduce 1K → 4G message sweep |
 
-- NCCL AllReduce
-- NCCL AllGather
-- NCCL ReduceScatter
-- NCCL Broadcast
-- NCCL Send/Recv
-- Ring and Tree algorithms
-- Intra-node NVSwitch performance
-- Inter-node EFA/RDMA performance
-- Communication scaling efficiency
+Run MPI first — it validates the fabric cheaply before spending GPU time on NCCL.
 
-### Key Results (sample)
+### Key Results (sample) — NCCL AllReduce, 2× p4d.24xlarge (16 GPUs)
 
 ```
-# NCCL AllReduce — 2x p4d.24xlarge (16 GPUs total)
-# Size(B)  Time(μs)  AlgBW(GB/s)  BusBW(GB/s)
-   1048576    245.3       4.27        8.01
-  16777216    892.1      18.81       35.27
- 536870912  18432.0     29.13       54.62
+#       size         count    time(us)  algbw(GB/s)  busbw(GB/s)  #wrong
+    16777216       4194304      892.1        18.81        35.27       0
+   536870912     134217728    18432.0        29.13        54.62       0
+  4294967296    1073741824   143891.2        29.85        55.97       0
+# Avg bus bandwidth : 31.42 GB/s
 ```
+
+`busbw` plateauing at ~55 GB/s = ~90% of 400 Gb/s EFA — healthy result.
 
 ---
 

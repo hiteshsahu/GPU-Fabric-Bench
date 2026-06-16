@@ -4,7 +4,6 @@
 #
 # AllReduce is THE critical collective op in distributed training
 # (gradient synchronization after each backward pass)
-# This is what NVIDIA interviewers mean when they ask about NCCL performance
 
 set -euo pipefail
 
@@ -28,6 +27,17 @@ echo "============================================"
 
 # Source NCCL environment
 source /etc/profile.d/nccl.sh
+
+# Add Metadata
+{
+  echo "# Timestamp: $TIMESTAMP"
+  echo "# Nodes: $NUM_NODES"
+  echo "# GPUs per node: $GPUS_PER_NODE"
+  echo "# Total GPUs: $TOTAL_PROCS"
+  echo "# Hostfile:"
+  cat "$HOSTFILE"
+  echo
+} > "$RESULTS_FILE"
 
 # Run AllReduce sweep: 1KB to 4GB message sizes
 mpirun \
