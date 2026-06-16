@@ -1,19 +1,24 @@
 # GPU-Fabric-Bench 🛜
-> Reproducible RDMA fabric benchmarking suite for NCCL GPU collective communications on AWS EFA mapping InfiniBand concepts to cloud-native HPC networking.
+
+> Reproducible RDMA fabric benchmarking suite for NCCL GPU collective communications on AWS EFA mapping InfiniBand
+> concepts to cloud-native HPC networking.
 
 
 ![GPU-Fabric-Bench](./img/cover.jpeg)
 
 ### 🎯 Goal
-> Goal is to build NVIDIA GPU-GPU communication network(Not to be confused with AWS VPC) for distributed AI/HPC workloads
+
+> Goal is to build NVIDIA GPU-GPU communication network(Not to be confused with AWS VPC) for distributed AI/HPC
+> workloads
 
 ### Relationship to nvidia-superpod
+
 These two projects complement each other cleanly:
 
-| Project              | What it shows                                                  |
-|----------------------|----------------------------------------------------------------|
-| [nvidia-superpod]()  | GPU cluster provisioning, Kubernetes, SLURM, Triton            |
-| [gpu-fabric-bench]() | Network fabric layer, RDMA, collective comms, HPC benchmarking |
+| Project                                                               | What it shows                                                  |
+|-----------------------------------------------------------------------|----------------------------------------------------------------|
+| [ 🐸 nvidia-superpod](https://github.com/hiteshsahu/Nvidia-Super-Pod) | GPU cluster provisioning, Kubernetes, CUDA, Triton, Pytorch    |
+| [🛜 gpu-fabric-bench ](.)                                             | Network fabric layer, RDMA, collective comms, HPC benchmarking |
 
 ---
 
@@ -24,19 +29,25 @@ These two projects complement each other cleanly:
 Networking Stack
 </h2>
 
-### 
+###  
+
 ### 1. 🔀 `RDMA` :: Remote Direct Memory Access
+
 > Across servers Direct GPU memory access over network
+
 - Memory access across hosts
 
 ### **GPUDirect RDMA**
+
 > GPU to GPU across nodes → GPUDirect RDMA
+
 - Works **across hosts**
 - GPU-to-GPU or GPU-to-NIC
 - data transfer for HPC, AI clusters
 - No CPU involvement = Ultra-low latency
 
 ### ⛔ **Limitations**
+
 - ⚠️ Needs specialized `RDMA-capable NICs` <br/><br/>
 
 Example: [ConnectX NICs](https://resources.nvidia.com/en-us-accelerated-networking-resource-library/connectx-7-datasheet)
@@ -46,7 +57,9 @@ Example: [ConnectX NICs](https://resources.nvidia.com/en-us-accelerated-networki
 Technical deep dive of RDMA is in [doc/rdma-primer](./docs/rdma-primer.md)
 
 ### 2. 🪢 **InfiniBand**
+
 > High throughput, low latency, low CPU overhead compute interconnect for HPC and AI clusters
+
 - Managed by [Open Subnet Manager (SM)](https://docs.nvidia.com/networking/display/mlnxofedv461000/opensm).
 - Ultra-low latency (1–2 µs)
 - Uses `Native RDMA` Stack to access remote memory directly without CPU involvement
@@ -54,21 +67,25 @@ Technical deep dive of RDMA is in [doc/rdma-primer](./docs/rdma-primer.md)
 - Used in large HPC / AI clusters: over 50% HPC clusters use InfiniBand
 
 ### ⛔ **Limitations**
- - ⚠️ Need physical Mellanox/NVIDIA NICs (~$500–2000) + IB switch.
 
-- [NVIDIA Quantum-X 800](https://www.nvidia.com/en-us/networking/products/infiniband/quantum-x800/) Infiniband switch for high-performance InfiniBand-based AI<br/><br/>
-  
+- ⚠️ Need physical Mellanox/NVIDIA NICs (~$500–2000) + IB switch.
+
+- [NVIDIA Quantum-X 800](https://www.nvidia.com/en-us/networking/products/infiniband/quantum-x800/) Infiniband switch
+  for high-performance InfiniBand-based AI<br/><br/>
+
   <img src="./img/hw/nvidia-infiniband-switch-hdr-200gbs-2c50-d-2x.jpeg" alt="InfiniBand" height="300" align="center">
 
-
 ### 3. 🔌 `RoCE`:: RDMA over Converged Ethernet
+
 > RDMA + Ethernet: Enables `RDMA` over Ethernet
+
 - Standards-based (IBTA) alternative to InfiniBand over Ethernet
 - More flexible than infiniBand
 - Cheaper Enterprise-friendly
 - Used in enterprise AI clusters
 
 ### ⛔ **Limitations**
+
 - ⚠️ Need RDMA-capable NICs `RoCE` works on standard 25GbE+
 
 ---
@@ -78,19 +95,22 @@ Technical deep dive of RDMA is in [doc/rdma-primer](./docs/rdma-primer.md)
   AWS Networking Stack
 </h2>
 
-
 ### ⚡  `EFA` :: **Elastic Fabric Adapter**
-`EFA` (Elastic Fabric Adapter) = AWS's RDMA-like network interface using a proprietary **SRD (Scalable Reliable Datagram)** transport — not RoCE v2 or standard IB.
+> `EFA` (Elastic Fabric Adapter) = AWS's RDMA-like network interface 
+
+Uses a proprietary **SRD (Scalable Reliable
+Datagram)** transport not RoCE v2 or standard IB.
 
 ### **Nvidia Equivalent**
+
 Detailed comparison of ib & aws efa is in [doc/Ib-vs-efa](./docs/Ib-vs-efa.md)
 
 - ☑️  `InfiniBand` → EFA: same kernel-bypass + RDMA semantics, different transport (SRD vs RC/UD)
 - ☑️  `HCA / libibverbs` → EFA NIC + libfabric with EFA provider
 - ☑️  `NCCL over IB` → NCCL over EFA via `aws-ofi-nccl` plugin
 
-
 ### **Verdict**
+
 > AWS EFA can provide the setup needed for building HPC cluster network
 
 - Supports Nvidia NCCL/MPI stack without custom hardware
@@ -99,20 +119,19 @@ Detailed comparison of ib & aws efa is in [doc/Ib-vs-efa](./docs/Ib-vs-efa.md)
 
 ---
 
-
 ## 🏗️ Architecture
 
 An $N$ GPU nodes connected HPC cluster performing distributed load can be created with EFA.
 
 Depending on Type of EC2 used we can experiment with different network boards
 
-![](./img/arch/gpu_fabric_bench_architecture.svg)
+![HPC Network Layer](./img/arch/gpu_fabric_bench_architecture.svg)
 
-This gives a flexibility of trying different NCCL topologies with opportunity to run Benchmarks. 
+This gives a flexibility of trying different NCCL topologies with opportunity to run Benchmarks.
 
 Benchmark results can be stored in `S3` and then a Python script can be used to visualize test results.
 
-![](./img/arch/hardware-layer.png)
+![HPC Hardware Layer](./img/arch/hardware-layer.png)
 
 
 ---
@@ -178,10 +197,13 @@ python plot_bandwidth.py
 ---
 
 ## ⏱️ Benchmark
+
 > Performance analysis: bandwidth, latency, bus utilization
 
 ### 🔗 `MPI` + `NCCL` integration
+
 GPU-Fabric-Bench can benchmark:
+
 - NCCL AllReduce
 - NCCL AllGather
 - NCCL ReduceScatter
@@ -205,6 +227,7 @@ GPU-Fabric-Bench can benchmark:
 ---
 
 ## 💰 Cost Consideration
+
 > Recommended: Prototype on c5n, run GPU benchmark once, capture results, terminate.
 
 | Instance          | Use case                 | Cost      |
@@ -212,9 +235,10 @@ GPU-Fabric-Bench can benchmark:
 | `c5n.18xlarge` x2 | EFA + MPI + OSU (no GPU) | ~$7.76/hr |
 | `p4d.24xlarge` x2 | Full NCCL GPU benchmarks | ~$64/hr   |
 
+### 1. Amazon EC2 UltraClusters 🏎️
 
-### 1. Amazon EC2 UltraClusters  🏎️
 > Production grade Nvidia Super Computer
+
 - `p4d.24xlarge` = ~$32/hr.(Full GPU benchmark 2–4 hrs of actual runtime)
 - NVIDIA A100 Tensor Core GPUs
 - Estimated total cost: ~$30–50 for benchmark run with real results.
@@ -225,7 +249,9 @@ GPU-Fabric-Bench can benchmark:
 | p4de.24xlarge | 8 × A100 | 640 GB total HBM2e | 96 vCPUs | 1152 GiB | 400 Gbps EFA/ENA | Yes  | 600 GB/s NVSwitch |
 
 ### 2. AWS C5n Compute Instances 🚗
+
 > Cost-effective EFA testing without GPU spend
+
 - `c5n.18xlarge` = ~$3.88/hr
 - Intel Xeon (Cascade Lake) processors
 - EFA-enabled, CPU only: lets you test EFA + MPI + OSU benchmarks without GPU cost
@@ -238,6 +264,7 @@ GPU-Fabric-Bench can benchmark:
 ---
 
 ## 📒 Docs
+
 - [InfiniBand vs EFA Deep Dive](./docs/Ib-vs-efa.md)
 - [RDMA Primer](docs/rdma-primer.md)
 - [NCCL Tuning Guide](docs/nccl-tuning.md)
