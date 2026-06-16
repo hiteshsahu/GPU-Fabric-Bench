@@ -83,15 +83,37 @@ Technical deep dive of RDMA is in [doc/rdma-primer](./docs/rdma-primer.md)
 `EFA` (Elastic Fabric Adapter) = AWS's RDMA-like network interface using a proprietary **SRD (Scalable Reliable Datagram)** transport — not RoCE v2 or standard IB.
 
 ### **Nvidia Equivalent**
+Detailed comparison of ib & aws efa is in [doc/Ib-vs-efa](./docs/Ib-vs-efa.md)
+
 - ☑️  `InfiniBand` → EFA: same kernel-bypass + RDMA semantics, different transport (SRD vs RC/UD)
 - ☑️  `HCA / libibverbs` → EFA NIC + libfabric with EFA provider
 - ☑️  `NCCL over IB` → NCCL over EFA via `aws-ofi-nccl` plugin
 
-### **Advantage**
-- Provisioning with Terraform 
-- Supports Nvidia NCCL/MPI stack without custom hardware
 
-Detailed comparison of ib & aws efa is in [doc/Ib-vs-efa](./docs/Ib-vs-efa.md)
+### **Verdict**
+> AWS EFA can provide the setup needed for building HPC cluster network
+
+- Supports Nvidia NCCL/MPI stack without custom hardware
+- Can be Provision with `Terraform` IaC and tear down when not needed
+- **Low capx:** No need to buy expensive NVIDIA pieces of hardware
+
+---
+
+
+## 🏗️ Architecture
+
+An $N$ GPU nodes connected HPC cluster performing distributed load can be created with EFA.
+
+Depending on Type of EC2 used we can experiment with different network boards
+
+![](./img/arch/gpu_fabric_bench_architecture.svg)
+
+This gives a flexibility of trying different NCCL topologies with opportunity to run Benchmarks. 
+
+Benchmark results can be stored in `S3` and then a Python script can be used to visualize test results.
+
+![](./img/arch/hardware-layer.png)
+
 
 ---
 
@@ -115,39 +137,6 @@ cd ../benchmarks/nccl
 cd ../../analysis
 python parse_results.py ../benchmarks/nccl/results/
 python plot_bandwidth.py
-
-```
-
-
-## 🏗️ Architecture
-
-![](./img/arch/gpu_fabric_bench_architecture.svg)
-
-```text
-    
-    ┌─────────────────────────────────────────────────────┐
-    │              AWS Cluster Placement Group            │
-    │                                                     │
-    │  ┌──────────────┐  EFA   ┌──────────────┐           │
-    │  │ p4d.24xlarge │◄──────►│ p4d.24xlarge │           │
-    │  │  8x A100 GPU │        │  8x A100 GPU │           │
-    │  │  4x EFA NICs │        │  4x EFA NICs │           │
-    │  └──────┬───────┘        └──────┬───────┘           │
-    │         │                       │                   │
-    │  ┌──────▼───────────────────────▼────────┐          │
-    │  │        HPC-optimized VPC              │          │
-    │  │  Jumbo frames (9001 MTU)              │          │
-    │  │  Enhanced networking (SR-IOV)         │          │
-    │  │  EFA security group (all intra-SG)    │          │
-    │  └───────────────────────────────────────┘          │
-    └─────────────────────────────────────────────────────┘
-                            │
-                  ┌─────────▼──────────┐
-                  │  S3 Results Bucket │
-                  │  benchmark outputs │
-                  │  bandwidth curves  │
-                  └────────────────────┘
-
 
 ```
 
