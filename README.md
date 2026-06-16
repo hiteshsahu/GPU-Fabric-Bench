@@ -140,59 +140,77 @@ Benchmark results can be stored in `S3` and then a Python script can be used to 
 ## ▶️ Development
 
 ```bash
-
 # 1. Provision infrastructure
 cd terraform/environments/dev
 terraform init && terraform apply
 
-# 2. Configure nodes
+# 2. Configure nodes (idempotent — safe to re-run)
 cd ../../../ansible
+cp inventory/hosts.ini.example inventory/hosts.ini  # fill in IPs from terraform output
 ansible-playbook -i inventory/hosts.ini site.yml
 
 # 3. Run benchmarks
-cd ../benchmarks/nccl
-./run_allreduce.sh
+cd ../benchmarks/mpi
+./osu_latency_bw.sh                    # validate EFA fabric first (cheap)
+
+cd ../nccl
+./run_allreduce.sh                     # GPU collective benchmark
 
 # 4. Analyze results
 cd ../../analysis
-python parse_results.py ../benchmarks/nccl/results/
-python plot_bandwidth.py
+python src/parse_results.py benchmarks/nccl/results/allreduce_*.txt
+python src/plot_bandwidth.py --out results.png benchmarks/nccl/results/
+python src/compare_baseline.py --nodes 2 --nics-per-node 4 benchmarks/nccl/results/allreduce_*.txt
 
+# 5. Run tests
+cd analysis && pytest tests -v
 ```
 
 ## 📁 Folder Structure
 
 ```text
-    
-    gpu-fabric-bench/
-    ├── terraform/
-    │   ├── efa-cluster/        # p4d instances + placement group + EFA
-    │   ├── vpc-hpc/            # HPC-optimized VPC (jumbo frames, enhanced networking)
-    │   └── s3-results/         # benchmark result storage
-    ├── ansible/
-    │   ├── roles/
-    │   │   ├── efa-setup/      # EFA driver install, ibverbs, libfabric
-    │   │   ├── nccl-install/   # NCCL + nccl-tests
-    │   │   ├── openmpi/        # MPI for multi-node orchestration
-    │   │   └── osu-benchmarks/ # OSU MPI micro-benchmarks
-    ├── benchmarks/
-    │   ├── nccl/
-    │   │   ├── run_allreduce.sh
-    │   │   ├── run_allgather.sh
-    │   │   └── sweep_msgsize.sh   # sweep 1KB → 1GB message sizes
-    │   └── mpi/
-    │       ├── osu_latency.sh
-    │       └── osu_bandwidth.sh
-    ├── analysis/
-    │   ├── parse_results.py    # parse nccl-tests output
-    │   ├── plot_bandwidth.py   # matplotlib bandwidth curves
-    │   └── compare_baseline.py # vs theoretical peak
-    ├── docs/
-    │   ├── ib-vs-efa.md        # InfiniBand concepts mapped to EFA
-    │   ├── rdma-primer.md      # RDMA verbs, RC/UC/UD transport
-    │   └── results/            # sample benchmark outputs + graphs
-    └── README.md
-    
+gpu-fabric-bench/
+├── terraform/
+│   ├── modules/
+│   │   ├── vpc-hpc/            # HPC-optimized VPC, single-AZ subnet, EFA security group
+│   │   ├── efa-cluster/        # p4d/c5n instances, placement group, EFA NICs
+│   │   └── s3-results/         # benchmark result storage with lifecycle policy
+│   └── environments/
+│       └── dev/                # wires modules together; terraform apply starts here
+├── ansible/
+│   ├── inventory/
+│   │   └── hosts.ini.example   # copy and fill in IPs from terraform output
+│   ├── roles/
+│   │   ├── efa-setup/          # EFA driver install, libfabric
+│   │   ├── openmpi/            # OpenMPI 4.1 built against EFA libfabric
+│   │   ├── osu-benchmarks/     # OSU MPI micro-benchmarks (pt2pt + collective)
+│   │   └── nccl-install/       # aws-ofi-nccl plugin + nccl-tests (GPU only)
+│   └── site.yml                # full-cluster playbook; use --tags efa/mpi/nccl
+├── benchmarks/
+│   ├── nccl/
+│   │   ├── run_allreduce.sh    # AllReduce 1K → 4G sweep
+│   │   ├── run_allgather.sh    # AllGather 1K → 4G sweep
+│   │   └── sweep_msgsize.sh    # 5-pass sweep: Ring/Tree/auto × AllReduce/AllGather/ReduceScatter
+│   └── mpi/
+│       └── osu_latency_bw.sh   # OSU point-to-point latency + bandwidth in one script
+├── analysis/
+│   ├── src/
+│   │   ├── parse_results.py    # parse nccl-tests and OSU output into dataclasses
+│   │   ├── plot_bandwidth.py   # matplotlib bandwidth curves (headless PNG)
+│   │   └── compare_baseline.py # measured busbw vs theoretical EFA peak
+│   └── tests/
+│       ├── conftest.py         # pytest fixtures + sys.path wiring
+│       ├── fixtures/           # sample nccl-tests and OSU output files
+│       ├── test_parse_results.py
+│       ├── test_plot_bandwidth.py
+│       └── test_compare_baseline.py
+├── docs/
+│   ├── adr/
+│   │   └── 1-single-az-placement.md  # why all nodes must be in one AZ
+│   ├── rdma-primer.md          # RDMA verbs, QPs, RC/UC/UD, GPUDirect
+│   ├── nccl-tuning.md          # NCCL env vars, Ring vs Tree, EFA tuning recipes
+│   └── ib-vs-efa.md            # InfiniBand vs EFA transport comparison
+└── README.md
 ```
 
 ---

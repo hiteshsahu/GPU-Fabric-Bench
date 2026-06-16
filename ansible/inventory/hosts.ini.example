@@ -1,0 +1,11 @@
+# Copy to hosts.ini and fill in private IPs from Terraform output:
+#   terraform -chdir=terraform/environments/dev output -raw private_ips
+#
+# Run with: ansible-playbook -i inventory/hosts.ini site.yml
+
+[cluster]
+10.0.1.10 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/your-key.pem
+10.0.1.11 ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/your-key.pem
+
+[cluster:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
