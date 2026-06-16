@@ -1,15 +1,15 @@
-# Ansible — EFA Cluster Provisioning
+## Ansible EFA Cluster Provisioning
 
 Idempotent provisioning of EFA cluster nodes. Mirrors what
 `terraform/modules/efa-cluster/templates/user_data.sh.tpl` does at boot,
 but structured for re-runs, partial installs, and day-2 operations.
 
-## Quick start
+### Quick start
 
 ```bash
 # 1. Copy and fill in cluster IPs (from `terraform output private_ips`)
 cp inventory/hosts.ini.example inventory/hosts.ini
-vi inventory/hosts.ini
+nano inventory/hosts.ini
 
 # 2. Run full provisioning
 ansible-playbook -i inventory/hosts.ini site.yml
@@ -19,19 +19,7 @@ ansible cluster -i inventory/hosts.ini -m command \
   -a "/opt/amazon/efa/bin/fi_info -p efa"
 ```
 
-## Roles
-
-| Role | What it does | Idempotency guard |
-|------|-------------|-------------------|
-| `efa-setup` | Downloads and runs the AWS EFA installer | Skips if `/opt/amazon/efa/bin/fi_info` exists |
-| `openmpi` | Builds OpenMPI 4.1.6 against EFA libfabric | Skips if `/opt/openmpi/bin/mpirun` exists |
-| `osu-benchmarks` | Builds OSU micro-benchmarks (pt2pt + collective) | Skips if `osu_latency` binary exists |
-| `nccl-install` | Installs aws-ofi-nccl plugin + nccl-tests (GPU only) | Skips entire block if `nvcc` not found |
-
-The `nccl-install` role also writes `/etc/profile.d/nccl-efa.sh` on every
-node (CPU and GPU) so that NCCL env defaults are always set.
-
-## Selective runs with tags
+### Selective runs with tags
 
 ```bash
 # EFA driver only
@@ -47,7 +35,7 @@ ansible-playbook -i inventory/hosts.ini site.yml --tags nccl
 ansible-playbook -i inventory/hosts.ini site.yml --tags hostfile
 ```
 
-## Overriding defaults
+### Overriding defaults
 
 Each role has a `defaults/main.yml`. Override at play time:
 
@@ -57,7 +45,7 @@ ansible-playbook -i inventory/hosts.ini site.yml \
   -e "nccl_env_vars={'NCCL_ALGO':'Tree','NCCL_PROTO':'LL'}"
 ```
 
-## Role defaults
+### Role defaults
 
 ### efa-setup
 
@@ -88,7 +76,8 @@ ansible-playbook -i inventory/hosts.ini site.yml \
 | `cuda_home` | auto-detected from `nvcc` |
 | `nccl_env_vars` | see `defaults/main.yml` |
 
-## Relationship to Terraform user_data
+---
+### Relationship to Terraform user_data
 
 `user_data.sh.tpl` runs once at first boot and has no idempotency
 guarantees. These roles are preferred for:
