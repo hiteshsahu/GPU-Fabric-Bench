@@ -1,0 +1,50 @@
+---
+# Full cluster provisioning — runs all roles in dependency order.
+# Idempotent: safe to re-run after instance restart or partial failure.
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.ini site.yml
+#   ansible-playbook -i inventory/hosts.ini site.yml --tags nccl   # GPU nodes only
+#   ansible-playbook -i inventory/hosts.ini site.yml --tags mpi    # MPI layer only
+
+- name: Provision EFA cluster nodes
+  hosts: cluster
+  become: false
+  gather_facts: true
+
+  roles:
+    - role: efa-setup
+      tags: [efa]
+
+    - role: openmpi
+      tags: [mpi]
+
+    - role: osu-benchmarks
+      tags: [osu, mpi]
+
+    - role: nccl-install
+      tags: [nccl, gpu]
+
+  post_tasks:
+    - name: Write MPI hostfile
+      copy:
+        dest: /etc/nccl_hostfile
+        content: |
+          {% for host in ansible_play_hosts %}
+          {{ hostvars[host]['ansible_default_ipv4']['address'] }} slots={{ hostvars[host]['ansible_processor_nproc'] }}
+          {% endfor %}
+        mode: "0644"
+      become: yes
+      run_once: false
+      tags: [mpi, hostfile]
+
+    - name: Verify hostfile
+      command: cat /etc/nccl_hostfile
+      register: hostfile_content
+      changed_when: false
+      tags: [mpi, hostfile]
+
+    - name: Print hostfile
+      debug:
+        msg: "{{ hostfile_content.stdout_lines }}"
+      tags: [mpi, hostfile]

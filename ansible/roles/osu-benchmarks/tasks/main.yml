@@ -1,0 +1,61 @@
+---
+- name: Check if osu_latency is already installed
+  stat:
+    path: "{{ osu_prefix }}/libexec/osu-micro-benchmarks/mpi/pt2pt/osu_latency"
+  register: osu_binary
+
+- name: Download OSU micro-benchmarks
+  get_url:
+    url: "{{ osu_url }}"
+    dest: "/tmp/osu-micro-benchmarks-{{ osu_version }}.tar.gz"
+    mode: "0644"
+  when: not osu_binary.stat.exists
+
+- name: Extract OSU micro-benchmarks
+  unarchive:
+    src: "/tmp/osu-micro-benchmarks-{{ osu_version }}.tar.gz"
+    dest: /tmp
+    remote_src: yes
+    creates: "/tmp/osu-micro-benchmarks-{{ osu_version }}"
+  when: not osu_binary.stat.exists
+
+- name: Configure OSU micro-benchmarks
+  command: >
+    ./configure
+    CC={{ openmpi_prefix }}/bin/mpicc
+    CXX={{ openmpi_prefix }}/bin/mpicxx
+    --prefix={{ osu_prefix }}
+  args:
+    chdir: "/tmp/osu-micro-benchmarks-{{ osu_version }}"
+    creates: "/tmp/osu-micro-benchmarks-{{ osu_version }}/Makefile"
+  when: not osu_binary.stat.exists
+
+- name: Build OSU micro-benchmarks
+  command: make -j{{ ansible_processor_nproc }}
+  args:
+    chdir: "/tmp/osu-micro-benchmarks-{{ osu_version }}"
+    creates: "/tmp/osu-micro-benchmarks-{{ osu_version }}/mpi/pt2pt/.libs"
+  when: not osu_binary.stat.exists
+
+- name: Install OSU micro-benchmarks
+  command: make install
+  args:
+    chdir: "/tmp/osu-micro-benchmarks-{{ osu_version }}"
+    creates: "{{ osu_prefix }}/libexec/osu-micro-benchmarks/mpi/pt2pt/osu_latency"
+  become: yes
+  when: not osu_binary.stat.exists
+
+- name: Write OSU profile.d entry
+  copy:
+    dest: /etc/profile.d/osu.sh
+    content: |
+      export PATH={{ osu_prefix }}/libexec/osu-micro-benchmarks/mpi/pt2pt:$PATH
+      export PATH={{ osu_prefix }}/libexec/osu-micro-benchmarks/mpi/collective:$PATH
+    mode: "0644"
+  become: yes
+
+- name: Verify osu_latency binary
+  stat:
+    path: "{{ osu_prefix }}/libexec/osu-micro-benchmarks/mpi/pt2pt/osu_latency"
+  register: osu_check
+  failed_when: not osu_check.stat.exists

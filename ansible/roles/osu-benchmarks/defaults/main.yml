@@ -1,0 +1,5 @@
+---
+osu_version: "7.3"
+osu_url: "https://mvapich.cse.ohio-state.edu/download/mvapich/osu-micro-benchmarks-7.3.tar.gz"
+osu_prefix: /opt/osu
+openmpi_prefix: /opt/openmpi
