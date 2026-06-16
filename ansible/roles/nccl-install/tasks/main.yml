@@ -1,0 +1,131 @@
+---
+# ── NCCL env defaults (all nodes) ────────────────────────────────────────────
+
+- name: Write NCCL/EFA environment profile
+  copy:
+    dest: /etc/profile.d/nccl-efa.sh
+    content: |
+      {% for key, value in nccl_env_vars.items() %}
+      export {{ key }}={{ value }}
+      {% endfor %}
+    mode: "0644"
+  become: yes
+
+# ── GPU-only: aws-ofi-nccl + nccl-tests ──────────────────────────────────────
+
+- name: Check for nvcc (GPU instance detection)
+  command: which nvcc
+  register: nvcc_check
+  changed_when: false
+  failed_when: false
+
+- name: Set cuda_home from nvcc path
+  set_fact:
+    _cuda_home: "{{ cuda_home if cuda_home else (nvcc_check.stdout | dirname | dirname) }}"
+  when: nvcc_check.rc == 0
+
+- name: Skip GPU setup on non-GPU instance
+  debug:
+    msg: "nvcc not found — skipping aws-ofi-nccl and nccl-tests (CPU instance)"
+  when: nvcc_check.rc != 0
+
+- name: Install build dependencies for aws-ofi-nccl
+  package:
+    name:
+      - git
+      - autoconf
+      - automake
+      - libtool
+    state: present
+  become: yes
+  when: nvcc_check.rc == 0
+
+- name: Check if aws-ofi-nccl plugin is installed
+  find:
+    paths: /usr/local/lib
+    patterns: "libnccl-net.so"
+  register: ofi_nccl_lib
+  when: nvcc_check.rc == 0
+
+- name: Clone aws-ofi-nccl
+  git:
+    repo: https://github.com/aws/aws-ofi-nccl.git
+    dest: /tmp/aws-ofi-nccl
+    version: master
+    update: no
+  when:
+    - nvcc_check.rc == 0
+    - ofi_nccl_lib.matched == 0
+
+- name: Run autogen for aws-ofi-nccl
+  command: ./autogen.sh
+  args:
+    chdir: /tmp/aws-ofi-nccl
+    creates: /tmp/aws-ofi-nccl/configure
+  when:
+    - nvcc_check.rc == 0
+    - ofi_nccl_lib.matched == 0
+
+- name: Configure aws-ofi-nccl
+  command: >
+    ./configure
+    --with-mpi={{ openmpi_prefix }}
+    --with-libfabric={{ efa_install_dir }}
+    --with-nccl={{ nccl_home }}
+    --with-cuda={{ _cuda_home }}
+  args:
+    chdir: /tmp/aws-ofi-nccl
+    creates: /tmp/aws-ofi-nccl/Makefile
+  when:
+    - nvcc_check.rc == 0
+    - ofi_nccl_lib.matched == 0
+
+- name: Build and install aws-ofi-nccl
+  shell: make -j{{ ansible_processor_nproc }} && make install
+  args:
+    chdir: /tmp/aws-ofi-nccl
+    creates: /usr/local/lib/libnccl-net.so
+  become: yes
+  when:
+    - nvcc_check.rc == 0
+    - ofi_nccl_lib.matched == 0
+
+- name: Check if nccl-tests are installed
+  stat:
+    path: /usr/local/bin/all_reduce_perf
+  register: nccl_tests_binary
+  when: nvcc_check.rc == 0
+
+- name: Clone nccl-tests
+  git:
+    repo: https://github.com/NVIDIA/nccl-tests.git
+    dest: /tmp/nccl-tests
+    version: master
+    update: no
+  when:
+    - nvcc_check.rc == 0
+    - not nccl_tests_binary.stat.exists
+
+- name: Build nccl-tests
+  command: >
+    make
+    MPI=1
+    MPI_HOME={{ openmpi_prefix }}
+    NCCL_HOME={{ nccl_home }}
+    CUDA_HOME={{ _cuda_home }}
+    -j{{ ansible_processor_nproc }}
+  args:
+    chdir: /tmp/nccl-tests
+    creates: /tmp/nccl-tests/build/all_reduce_perf
+  when:
+    - nvcc_check.rc == 0
+    - not nccl_tests_binary.stat.exists
+
+- name: Install nccl-tests binaries
+  shell: cp /tmp/nccl-tests/build/* /usr/local/bin/
+  args:
+    creates: /usr/local/bin/all_reduce_perf
+  become: yes
+  when:
+    - nvcc_check.rc == 0
+    - not nccl_tests_binary.stat.exists

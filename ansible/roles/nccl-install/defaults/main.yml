@@ -1,0 +1,14 @@
+---
+openmpi_prefix: /opt/openmpi
+efa_install_dir: /opt/amazon/efa
+nccl_home: /usr/local/nccl
+# cuda_home is auto-detected from `which nvcc` when empty
+cuda_home: ""
+
+nccl_env_vars:
+  NCCL_IB_HCA: efa
+  NCCL_SOCKET_IFNAME: efa
+  FI_EFA_USE_DEVICE_RDMA: "1"
+  FI_EFA_FORK_SAFE: "1"
+  NCCL_ALGO: Ring
+  NCCL_PROTO: Simple
