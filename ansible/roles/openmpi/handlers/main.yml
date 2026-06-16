@@ -1,0 +1,5 @@
+---
+- name: add openmpi to path
+  shell: source /etc/profile.d/openmpi.sh
+  args:
+    executable: /bin/bash

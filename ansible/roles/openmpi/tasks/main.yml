@@ -1,0 +1,82 @@
+---
+- name: Check if mpirun is already available
+  command: which mpirun
+  register: mpirun_check
+  changed_when: false
+  failed_when: false
+
+- name: Check if OpenMPI is installed at prefix
+  stat:
+    path: "{{ openmpi_prefix }}/bin/mpirun"
+  register: openmpi_binary
+
+- name: Install OpenMPI build dependencies
+  package:
+    name:
+      - gcc
+      - g++
+      - make
+      - wget
+    state: present
+  become: yes
+  when: not openmpi_binary.stat.exists
+
+- name: Download OpenMPI source
+  get_url:
+    url: "{{ openmpi_url }}"
+    dest: "/tmp/openmpi-{{ openmpi_version }}.tar.gz"
+    mode: "0644"
+  when: not openmpi_binary.stat.exists
+
+- name: Extract OpenMPI source
+  unarchive:
+    src: "/tmp/openmpi-{{ openmpi_version }}.tar.gz"
+    dest: /tmp
+    remote_src: yes
+    creates: "/tmp/openmpi-{{ openmpi_version }}"
+  when: not openmpi_binary.stat.exists
+
+- name: Configure OpenMPI
+  command: >
+    ./configure
+    --prefix={{ openmpi_prefix }}
+    --with-libfabric={{ efa_install_dir }}
+    --enable-mpirun-prefix-by-default
+  args:
+    chdir: "/tmp/openmpi-{{ openmpi_version }}"
+    creates: "/tmp/openmpi-{{ openmpi_version }}/Makefile"
+  when: not openmpi_binary.stat.exists
+
+- name: Build OpenMPI
+  command: make -j{{ ansible_processor_nproc }}
+  args:
+    chdir: "/tmp/openmpi-{{ openmpi_version }}"
+    creates: "/tmp/openmpi-{{ openmpi_version }}/ompi/mca/osc/.libs"
+  when: not openmpi_binary.stat.exists
+
+- name: Install OpenMPI
+  command: make install
+  args:
+    chdir: "/tmp/openmpi-{{ openmpi_version }}"
+    creates: "{{ openmpi_prefix }}/bin/mpirun"
+  become: yes
+  when: not openmpi_binary.stat.exists
+  notify: add openmpi to path
+
+- name: Write OpenMPI profile.d entry
+  copy:
+    dest: /etc/profile.d/openmpi.sh
+    content: |
+      export PATH={{ openmpi_prefix }}/bin:$PATH
+      export LD_LIBRARY_PATH={{ openmpi_prefix }}/lib:${LD_LIBRARY_PATH:-}
+    mode: "0644"
+  become: yes
+
+- name: Verify mpirun
+  command: "{{ openmpi_prefix }}/bin/mpirun --version"
+  register: mpirun_version
+  changed_when: false
+
+- name: Print mpirun version
+  debug:
+    msg: "{{ mpirun_version.stdout_lines[0] }}"
