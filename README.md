@@ -20,7 +20,7 @@ These two projects complement each other cleanly:
 ## 📋 Hardware Reality Check First
 
 <h2>
-  <img src="./img/NVIDIA_logo.svg.png" alt="GPU-Fabric-Bench" height="40" align="center">
+  <img src="./img/logo/NVIDIA_logo.svg.png" alt="GPU-Fabric-Bench" height="40" align="center">
 Networking Stack
 </h2>
 
@@ -37,10 +37,13 @@ Networking Stack
 - No CPU involvement = Ultra-low latency
 
 ### ⛔ **Limitations**
-- ⚠️ Needs `RDMA-capable NICs` <br/><br/>
+- ⚠️ Needs specialized `RDMA-capable NICs` <br/><br/>
 
-  <img src="./img/ConnectX-6-PCIe.png" alt="RDMA-capable NICs" height="300" align="center">
+Example: [ConnectX NICs](https://resources.nvidia.com/en-us-accelerated-networking-resource-library/connectx-7-datasheet)
 
+  <img src="./img/hw/bluefield-connectx-7-2c50-d-2x.jpeg" alt="RDMA-capable NICs" height="300" align="center">
+
+Technical deep dive of RDMA is in [doc/rdma-primer](./docs/rdma-primer.md)
 
 ### 2. 🪢 **InfiniBand**
 > High throughput, low latency, low CPU overhead compute interconnect for HPC and AI clusters
@@ -55,7 +58,7 @@ Networking Stack
 
 - [NVIDIA Quantum-X 800](https://www.nvidia.com/en-us/networking/products/infiniband/quantum-x800/) Infiniband switch for high-performance InfiniBand-based AI<br/><br/>
   
-  <img src="./img/nvidia-infiniband-switch-hdr-200gbs-2c50-d-2x.jpeg" alt="InfiniBand" height="300" align="center">
+  <img src="./img/hw/nvidia-infiniband-switch-hdr-200gbs-2c50-d-2x.jpeg" alt="InfiniBand" height="300" align="center">
 
 
 ### 3. 🔌 `RoCE`:: RDMA over Converged Ethernet
@@ -71,7 +74,7 @@ Networking Stack
 ---
 
 <h2>
-  <img src="./img/Amazon_Web_Services_2025.svg.png" alt="GPU-Fabric-Bench" width="48" align="center">
+  <img src="./img/logo/Amazon_Web_Services_2025.svg.png" alt="GPU-Fabric-Bench" width="48" align="center">
   AWS Networking Stack
 </h2>
 
@@ -87,6 +90,8 @@ Networking Stack
 ### **Advantage**
 - Provisioning with Terraform 
 - Supports Nvidia NCCL/MPI stack without custom hardware
+
+Detailed comparison of ib & aws efa is in [doc/Ib-vs-efa](./docs/Ib-vs-efa.md)
 
 ---
 
@@ -116,7 +121,7 @@ python plot_bandwidth.py
 
 ## 🏗️ Architecture
 
-![](./img/gpu_fabric_bench_architecture.svg)
+![](./img/arch/gpu_fabric_bench_architecture.svg)
 
 ```text
     

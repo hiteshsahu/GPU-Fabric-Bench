@@ -10,7 +10,7 @@
 **RDMA (Remote Direct Memory Access)** lets one host read or write another host's memory directly — bypassing the remote
 CPU and OS kernel entirely.
 
-![](../img/tcp_vs_rdma_data_path.svg)
+![](../img/arch/tcp_vs_rdma_data_path.svg)
 
 
 The full TCP path forces 4 copies and CPU involvement at every hop; RDMA collapses it to zero copies and zero CPU.
