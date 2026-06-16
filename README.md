@@ -15,10 +15,10 @@
 
 These two projects complement each other cleanly:
 
-| Project                                                               | What it shows                                                  |
-|-----------------------------------------------------------------------|----------------------------------------------------------------|
-| [ 🐸 nvidia-superpod](https://github.com/hiteshsahu/Nvidia-Super-Pod) | GPU cluster provisioning, Kubernetes, CUDA, Triton, Pytorch    |
-| [🛜 gpu-fabric-bench ](.)                                             | Network fabric layer, RDMA, collective comms, HPC benchmarking |
+| Project                                                                | What it shows                                                  |
+|------------------------------------------------------------------------|----------------------------------------------------------------|
+| [ 🐸 nvidia-superpod](https://github.com/hiteshsahu/Nvidia-Super-Pod)  | GPU cluster provisioning, Kubernetes, CUDA, Triton, Pytorch    |
+| [🛜 gpu-fabric-bench ](https://github.com/hiteshsahu/GPU-Fabric-Bench) | Network fabric layer, RDMA, collective comms, HPC benchmarking |
 
 ---
 
@@ -29,7 +29,7 @@ These two projects complement each other cleanly:
 Networking Stack
 </h2>
 
-###  
+###   
 
 ### 1. 🔀 `RDMA` :: Remote Direct Memory Access
 
@@ -96,7 +96,8 @@ Technical deep dive of RDMA is in [doc/rdma-primer](./docs/rdma-primer.md)
 </h2>
 
 ### ⚡  `EFA` :: **Elastic Fabric Adapter**
-> `EFA` (Elastic Fabric Adapter) = AWS's RDMA-like network interface 
+
+> `EFA` (Elastic Fabric Adapter) = AWS's RDMA-like network interface
 
 Uses a proprietary **SRD (Scalable Reliable
 Datagram)** transport not RoCE v2 or standard IB.
