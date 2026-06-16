@@ -1,0 +1,5 @@
+---
+- name: reload efa profile
+  shell: source /etc/profile.d/efa.sh
+  args:
+    executable: /bin/bash

@@ -1,0 +1,4 @@
+---
+efa_installer_url: https://efa-installer.amazonaws.com/aws-efa-installer-latest.tar.gz
+efa_install_dir: /opt/amazon/efa
+efa_tmp_dir: /tmp/efa-installer

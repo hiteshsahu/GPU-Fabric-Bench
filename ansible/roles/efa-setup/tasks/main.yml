@@ -1,0 +1,47 @@
+---
+- name: Check if EFA is already installed
+  stat:
+    path: "{{ efa_install_dir }}/bin/fi_info"
+  register: efa_binary
+
+- name: Download EFA installer
+  get_url:
+    url: "{{ efa_installer_url }}"
+    dest: /tmp/aws-efa-installer-latest.tar.gz
+    mode: "0644"
+  when: not efa_binary.stat.exists
+
+- name: Extract EFA installer
+  unarchive:
+    src: /tmp/aws-efa-installer-latest.tar.gz
+    dest: /tmp
+    remote_src: yes
+    creates: "{{ efa_tmp_dir }}"
+  when: not efa_binary.stat.exists
+
+- name: Find extracted installer directory
+  find:
+    paths: /tmp
+    patterns: "aws-efa-installer*"
+    file_type: directory
+  register: efa_dirs
+  when: not efa_binary.stat.exists
+
+- name: Run EFA installer
+  command: "./efa_installer.sh -y --skip-kmod"
+  args:
+    chdir: "{{ efa_dirs.files[0].path }}"
+    creates: "{{ efa_install_dir }}/bin/fi_info"
+  become: yes
+  when: not efa_binary.stat.exists
+  notify: reload efa profile
+
+- name: Verify EFA installation
+  command: "{{ efa_install_dir }}/bin/fi_info -p efa"
+  register: fi_info_result
+  changed_when: false
+  failed_when: fi_info_result.rc != 0
+
+- name: Print EFA provider info
+  debug:
+    msg: "{{ fi_info_result.stdout_lines[:3] }}"
