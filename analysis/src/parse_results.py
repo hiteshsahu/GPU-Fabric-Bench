@@ -37,7 +37,7 @@ def parse_nccl_output(filepath: str) -> list[NCCLResult]:
     # nccl-tests output line pattern:
     # size    count    type    redop    root    time    algbw    busbw    #wrong    time    algbw    busbw
     pattern = re.compile(
-        r'^\s*(\d+)\s+(\d+)\s+(\w+)\s+(\w+)\s+(\d+)'
+        r'^\s*(\d+)\s+(\d+)\s+(\w+)\s+(\w+)\s+(-?\d+)'
         r'\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)'
         r'\s+\S+'
         r'\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)'
