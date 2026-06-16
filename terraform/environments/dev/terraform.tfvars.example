@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars and fill in before running terraform apply
+
+aws_region        = "us-east-1"
+availability_zone = "us-east-1a"   # p4d capacity is AZ-specific; check aws ec2 describe-instance-type-offerings
+
+project = "gpu-fabric-bench"
+
+# ── Instance options ──────────────────────────────────────────────────────────
+# Cheap path  — EFA + MPI + OSU, no GPU:  c5n.18xlarge, efa_nic_count = 1
+# Full GPU    — NCCL + AllReduce:         p4d.24xlarge, efa_nic_count = 4
+
+instance_type = "c5n.18xlarge"
+efa_nic_count = 1
+node_count    = 2
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+key_name        = "my-keypair"          # must already exist in the target region
+ssh_cidr_blocks = ["203.0.113.10/32"]  # restrict to your IP
+
+# ── Storage ───────────────────────────────────────────────────────────────────
+results_bucket_name = "gpu-fabric-bench-results-<your-account-id>"  # must be globally unique
