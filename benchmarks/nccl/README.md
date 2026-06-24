@@ -4,15 +4,18 @@ These tests check both the performance and the correctness of NCCL operations.
 
 Run `all_reduce_perf` from 1K to 4G doubling each step, check 1, 20 iters 
 
-the output looks like this:
+The output **looks like** the annotated example below.
 
-
+> ⚠️ **Illustrative output — not a captured run.** The numbers below show the
+> *expected shape* of an `all_reduce_perf` sweep (and double as the fixture the
+> analysis tests parse against). They have **not** been measured on real A100s
+> yet. Timestamps and file paths are placeholders.
 
 ```bash
 ============================================
-NCCL AllReduce Benchmark
+NCCL AllReduce Benchmark  (ILLUSTRATIVE — not yet run)
 Nodes: 2 | GPUs/node: 8 | Total: 16
-Timestamp: 20260616_143022
+Timestamp: <placeholder>
 ============================================
 
 # nccl-tests allreduce_perf
@@ -52,7 +55,7 @@ Timestamp: 20260616_143022
 # Out of bounds values : 0 OK
 # Avg bus bandwidth    : 31.42 GB/s
 
-Results saved: benchmarks/nccl/results/allreduce_20260616_143022.txt
+(placeholder path — real runs write to benchmarks/nccl/results/allreduce_<timestamp>.txt)
 ```
 
 Key things to read:
@@ -68,9 +71,11 @@ Key things to read:
 
 ### Expected result
 
-What the shape tells you on EFA:
+What the shape *should* tell you on EFA (once measured):
 
 - Small messages (`< 1 MB`) — latency-bound, `busbw` climbs slowly
-- Large messages (`≥ 64 MB`) — bandwidth-bound, `busbw` plateaus near ~55 GB/s (~90% of `400 Gb/s` EFA on `p4d` with 4
-  NICs)
-- The summary line Avg bus bandwidth: `31.42 GB/s` 
+- Large messages (`≥ 64 MB`) — bandwidth-bound, `busbw` plateaus near the EFA
+  line (~45–50 GB/s, ~90% of `400 Gb/s` on `p4d` with 4 NICs)
+- The summary `Avg bus bandwidth` averages across the whole sweep, so it sits
+  well below the large-message plateau — read the plateau, not the average, to
+  judge fabric health.

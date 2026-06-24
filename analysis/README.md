@@ -47,6 +47,10 @@ Output:
 Peak bus bandwidth: 55.97 GB/s at 4.0GB
 ```
 
+> ℹ️ All example outputs on this page are produced from the synthetic test
+> fixtures in `tests/fixtures/` (used to exercise the parsers/plotters). They
+> are **not** measurements from a real cluster run.
+
 ---
 
 ### 2. Plot Bandwidth:  `plot_bandwidth.py`

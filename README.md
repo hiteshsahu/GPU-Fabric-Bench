@@ -228,17 +228,24 @@ gpu-fabric-bench/
 
 Run MPI first — it validates the fabric cheaply before spending GPU time on NCCL.
 
-### Key Results (sample) — NCCL AllReduce, 2× p4d.24xlarge (16 GPUs)
+### What "good" looks like (expected — full GPU run pending)
 
-```
-#       size         count    time(us)  algbw(GB/s)  busbw(GB/s)  #wrong
-    16777216       4194304      892.1        18.81        35.27       0
-   536870912     134217728    18432.0        29.13        54.62       0
-  4294967296    1073741824   143891.2        29.85        55.97       0
-# Avg bus bandwidth : 31.42 GB/s
-```
+> ⚠️ **Status: harness complete, `p4d` GPU sweep not yet run.** The suite
+> provisions, configures, parses, and plots end-to-end. The shape below is the
+> *theoretical target* I'm benchmarking against — **not** a captured run. It
+> will be replaced with real `nccl-tests` output once I run the sweep.
 
-`busbw` plateauing at ~55 GB/s = ~90% of 400 Gb/s EFA — healthy result.
+On 2× `p4d.24xlarge` (16× A100, 400 Gb/s EFA), a healthy AllReduce sweep should:
+
+- show **`busbw` rising with message size** as per-collective overhead amortizes,
+- **plateau near the EFA line** on large messages — 400 Gb/s ≈ 50 GB/s per
+  direction, so bus bandwidth approaching ~45 GB/s (~90% of line rate) is the goal,
+- report **`#wrong = 0`** on every row (correctness gate).
+
+`algbw` is what the application sees (size / time); `busbw` normalizes for the
+AllReduce traffic pattern and is the number to compare against hardware peak.
+The **plateau**, not the peak, is the signal that the fabric — not the
+collective — has become the limit.
 
 ---
 

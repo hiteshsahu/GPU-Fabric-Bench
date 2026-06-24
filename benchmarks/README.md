@@ -74,9 +74,9 @@ HOSTFILE=~/hostfile benchmarks/nccl/run_allreduce.sh
 
 | Metric | Expected | Investigate if |
 |--------|----------|----------------|
-| `busbw` at 512 MB | ~45–55 GB/s | < 30 GB/s |
+| `busbw` at 512 MB | ~40–48 GB/s | < 30 GB/s |
 | `#wrong` | `0` | Any non-zero |
-| `Avg bus bandwidth` | ~30+ GB/s | < 20 GB/s |
+| `Avg bus bandwidth` | sweep-dependent | plateau < 40 GB/s |
 
 Results are saved to `benchmarks/nccl/results/` and optionally uploaded to S3.
 
